@@ -1,7 +1,29 @@
+buildscript {
+    ext.kotlin_version = '1.9.23'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Explicitly load the new Kotlin plugin here
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Load the Android tools plugin
+        classpath 'com.android.tools.build:gradle:8.1.1' 
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin') {
+                details.useVersion '1.9.23'
+            }
+        }
     }
 }
 
