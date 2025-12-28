@@ -4,18 +4,19 @@ import 'package:another_telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 
 @pragma('vm:entry-point')
 void backgroundMessageHandler(SmsMessage message) async {
   String sender = message.address ?? "";
-  print("DEBUG: SMS Received from $sender");
+  logDebug("DEBUG: SMS Received from $sender");
 
   final prefs = await SharedPreferences.getInstance();
 
   // 1. CHECK MASTER SWITCH
   bool isEnabled = prefs.getBool('app_enabled') ?? true;
   if (!isEnabled) {
-    print("App disabled. Ignoring.");
+    logDebug("App disabled. Ignoring.");
     return;
   }
 
@@ -45,7 +46,7 @@ void backgroundMessageHandler(SmsMessage message) async {
       // RESET STOP SIGNAL BEFORE STARTING
       await prefs.setBool('stop_alarm_signal', false);
       
-      print("Pager Alert! Playing: $soundPath");
+      logDebug("Pager Alert! Playing: $soundPath");
       await _playLocalAlarm(soundPath);
     }
   }
@@ -83,7 +84,7 @@ Future<void> _playLocalAlarm(String filePath) async {
         // Check if Stop Button was pressed
         bool stopNow = prefs.getBool('stop_alarm_signal') ?? false;
         if (stopNow) {
-          print("Stop signal received. Killing audio.");
+          logDebug("Stop signal received. Killing audio.");
           break;
         }
 
@@ -95,8 +96,15 @@ Future<void> _playLocalAlarm(String filePath) async {
       await player.stop();
     }
   } catch (e) {
-    print("Audio Error: $e");
+    logDebug("Audio Error: $e");
   } finally {
     await player.dispose();
+  }
+}
+
+// Helper function to print only in debug mode
+void logDebug(String message) {
+  if (kDebugMode) {
+    logDebug("PAGER_DEBUG: $message");
   }
 }

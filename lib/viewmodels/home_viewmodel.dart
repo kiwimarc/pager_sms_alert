@@ -56,10 +56,6 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> stopAlarm() async {
-    await _repo.sendStopSignal();
-  }
-
   Future<void> pickSound() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (result != null && result.files.single.path != null) {

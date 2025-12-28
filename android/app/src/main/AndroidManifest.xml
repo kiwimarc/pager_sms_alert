@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="pager_sms_alert"
+        android:label="Silent Bypass Pager"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <receiver android:name="com.shounakmulay.telephony.sms.IncomingSmsReceiver"

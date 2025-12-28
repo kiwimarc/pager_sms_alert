@@ -5,7 +5,6 @@ import '../models/contact_model.dart';
 class PreferencesRepo {
   static const String keyContacts = 'priority_contacts_v3';
   static const String keyAppEnabled = 'app_enabled';
-  static const String keyStopSignal = 'stop_alarm_signal';
 
   // --- CONTACTS ---
   Future<List<ContactModel>> getContacts() async {
@@ -46,9 +45,4 @@ class PreferencesRepo {
     await prefs.setBool(keyAppEnabled, value);
   }
 
-  // --- STOP SIGNAL ---
-  Future<void> sendStopSignal() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(keyStopSignal, true);
-  }
 }
