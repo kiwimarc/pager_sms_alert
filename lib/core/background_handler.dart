@@ -4,19 +4,21 @@ import 'package:another_telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import 'smart_home/smart_home_manager.dart'; 
 
 @pragma('vm:entry-point')
 void backgroundMessageHandler(SmsMessage message) async {
   String sender = message.address ?? "";
-  logDebug("DEBUG: SMS Received from $sender");
+  debugPrint("SMS Received from $sender");
 
   final prefs = await SharedPreferences.getInstance();
 
   // 1. CHECK MASTER SWITCH
   bool isEnabled = prefs.getBool('app_enabled') ?? true;
   if (!isEnabled) {
-    logDebug("App disabled. Ignoring.");
+    debugPrint("App disabled. Ignoring message.");
     return;
   }
 
@@ -25,15 +27,13 @@ void backgroundMessageHandler(SmsMessage message) async {
   if (jsonString != null) {
     List<dynamic> decoded = jsonDecode(jsonString);
     
-    // Find match
+    // Find match (Case insensitive)
     var match;
     try {
       match = decoded.firstWhere(
         (c) {
-          // CONVERT BOTH TO LOWERCASE BEFORE COMPARING
           String incoming = sender.toLowerCase();
           String saved = c['number'].toString().toLowerCase();
-          
           return incoming.contains(saved);
         }, 
         orElse: () => null
@@ -41,12 +41,30 @@ void backgroundMessageHandler(SmsMessage message) async {
     } catch (e) { match = null; }
 
     if (match != null) {
+      debugPrint("Matched Priority Contact: ${match['number']}");
+
+      // --- STEP A: TRIGGER SMART HOME ---
+      try {
+        final smartHome = SmartHomeManager();
+        String? contactEntityId = match['entityId']; 
+        
+        debugPrint("Triggering Smart Home Action (Target: ${contactEntityId ?? 'Default'})...");
+        
+        // We don't await this indefinitely so it doesn't delay the sound
+        smartHome.triggerAlarm(specificEntityId: contactEntityId).then((success) {
+           debugPrint("Smart Home Result: $success");
+        });
+      } catch (e) {
+        debugPrint("Smart Home Error: $e");
+      }
+
+      // --- STEP B: PLAY AUDIO ---
       String soundPath = match['soundPath'];
       
-      // RESET STOP SIGNAL BEFORE STARTING
+      // Reset stop signal so previous clicks don't kill this new alarm immediately
       await prefs.setBool('stop_alarm_signal', false);
       
-      logDebug("Pager Alert! Playing: $soundPath");
+      debugPrint("Starting Audio Alert: $soundPath");
       await _playLocalAlarm(soundPath);
     }
   }
@@ -63,7 +81,7 @@ Future<void> _playLocalAlarm(String filePath) async {
     androidAudioAttributes: AndroidAudioAttributes(
       contentType: AndroidAudioContentType.music,
       flags: AndroidAudioFlags.audibilityEnforced,
-      usage: AndroidAudioUsage.alarm, // <--- CRITICAL
+      usage: AndroidAudioUsage.alarm, 
     ),
   ));
 
@@ -71,40 +89,25 @@ Future<void> _playLocalAlarm(String filePath) async {
     final file = File(filePath);
     if (await file.exists()) {
       await player.setFilePath(filePath);
-      player.play(); // Start playing
-
-      // SMART LOOP: Check for STOP signal every 500ms
-      // Max duration: 60 checks * 500ms = 30 seconds
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.reload();
+      player.play();
       
+      // Check every 500ms for 30 seconds (60 checks)
       for (int i = 0; i < 60; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Check if Stop Button was pressed
-        bool stopNow = prefs.getBool('stop_alarm_signal') ?? false;
-        if (stopNow) {
-          logDebug("Stop signal received. Killing audio.");
-          break;
-        }
 
         // Check if audio finished naturally
         if (player.processingState == ProcessingState.completed) {
           break;
         }
+
       }
       await player.stop();
+    } else {
+      debugPrint("Error: Sound file not found at $filePath");
     }
   } catch (e) {
-    logDebug("Audio Error: $e");
+    debugPrint("Audio Player Error: $e");
   } finally {
     await player.dispose();
-  }
-}
-
-// Helper function to print only in debug mode
-void logDebug(String message) {
-  if (kDebugMode) {
-    logDebug("PAGER_DEBUG: $message");
   }
 }

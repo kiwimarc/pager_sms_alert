@@ -36,7 +36,7 @@ dependencies:
   permission_handler: ^11.0.0 # Easier permission requests
   file_picker: ^8.0.0         # File Picker for sound selection
   path_provider: ^2.1.2       # Access device paths
-
+  http: ^1.2.0                # HTTP requests for Smart Home integration
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
