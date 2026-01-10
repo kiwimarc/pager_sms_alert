@@ -43,7 +43,7 @@ void backgroundMessageHandler(SmsMessage message) async {
     if (match != null) {
       debugPrint("Matched Priority Contact: ${match['number']}");
 
-      // --- STEP A: TRIGGER SMART HOME (Feature from Code 1) ---
+      // --- STEP A: TRIGGER SMART HOME ---
       try {
         final smartHome = SmartHomeManager();
         String? contactEntityId = match['entityId']; 
@@ -58,7 +58,7 @@ void backgroundMessageHandler(SmsMessage message) async {
         debugPrint("Smart Home Error: $e");
       }
 
-      // --- STEP B: PLAY AUDIO (Logic from Code 2) ---
+      // --- STEP B: PLAY AUDIO ---
       String soundPath = match['soundPath'];
       
       // Reset stop signal so previous clicks don't kill this new alarm immediately
@@ -90,28 +90,16 @@ Future<void> _playLocalAlarm(String filePath) async {
     if (await file.exists()) {
       await player.setFilePath(filePath);
       player.play();
-
-      // SMART LOOP: Checks for stop signal
-      final prefs = await SharedPreferences.getInstance();
       
       // Check every 500ms for 30 seconds (60 checks)
       for (int i = 0; i < 60; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
 
-        // 1. Check if audio finished naturally
+        // Check if audio finished naturally
         if (player.processingState == ProcessingState.completed) {
           break;
         }
 
-        // 2. Check for User Stop Signal (Restored from Code 2)
-        // We must reload prefs to get the latest value from the UI Isolate
-        await prefs.reload(); 
-        bool stopNow = prefs.getBool('stop_alarm_signal') ?? false;
-        
-        if (stopNow) {
-          debugPrint("Stop signal received. Stopping audio.");
-          break;
-        }
       }
       await player.stop();
     } else {
